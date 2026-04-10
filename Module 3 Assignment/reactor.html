@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Regional Distribution of Nuclear Power Capacity</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b10;
+  --border:#1a2235;
+  --border2:#243050;
+  --op:#2563c4;
+  --uc:#7ec8e3;
+  --text:#dde4f0;
+  --muted:#4a5570;
+  --muted2:#6a7a9a;
+  --accent:#00e5ff;
+}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'IBM Plex Sans',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;
+  padding:32px 40px 28px;
+}
+h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(1.5rem,3vw,2.3rem);
+  letter-spacing:.08em;color:var(--text);
+  text-align:center;margin-bottom:5px;
+}
+.source-tag{
+  font-family:'IBM Plex Mono',monospace;font-size:.58rem;
+  color:var(--muted);letter-spacing:.1em;text-transform:uppercase;
+  text-align:center;margin-bottom:32px;
+}
+.chart{
+  width:100%;max-width:860px;margin:0 auto;
+  display:flex;flex-direction:column;gap:12px;
+}
+.row{
+  display:grid;
+  grid-template-columns:220px 1fr;
+  align-items:center;
+  min-height:42px;
+}
+.region-label{
+  font-family:'IBM Plex Sans',sans-serif;
+  font-weight:700;font-size:.76rem;
+  letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text);text-align:right;
+  padding-right:20px;line-height:1.3;
+}
+.stack-wrap{
+  display:flex;align-items:center;height:38px;
+  cursor:default;
+}
+.seg-op{
+  height:100%;background:var(--op);
+  flex-shrink:0;border-radius:0;
+}
+.seg-uc{
+  height:100%;background:var(--uc);
+  flex-shrink:0;border-radius:0 3px 3px 0;
+}
+.bar-label{
+  margin-left:10px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.7rem;color:var(--text);
+  white-space:nowrap;flex-shrink:0;
+}
+.dot-grid{display:none;}
+.axis-wrap{
+  width:100%;max-width:860px;margin:4px auto 0;
+  display:grid;grid-template-columns:220px 1fr;
+}
+.axis-inner{
+  position:relative;border-top:1px solid var(--border2);height:26px;
+}
+.tick{
+  position:absolute;top:0;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.65rem;color:var(--muted2);
+  transform:translateX(-50%);padding-top:5px;
+}
+.tick::before{
+  content:'';position:absolute;top:-4px;left:50%;
+  transform:translateX(-50%);height:4px;width:1px;background:var(--border2);
+}
+.axis-unit-wrap{
+  width:100%;max-width:860px;margin:0 auto;
+  display:grid;grid-template-columns:220px 1fr;
+}
+.axis-unit{
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;
+  color:var(--muted);font-style:italic;letter-spacing:.04em;
+  text-align:center;margin-top:4px;
+}
+.legend-wrap{
+  width:100%;max-width:860px;margin:14px auto 0;
+  display:grid;grid-template-columns:220px 1fr;
+}
+.legend{
+  display:flex;justify-content:center;gap:36px;
+}
+.leg-item{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted2)}
+.leg-swatch{width:30px;height:18px;border-radius:2px;flex-shrink:0}
+#tooltip{
+  position:fixed;pointer-events:none;
+  background:#0c111e;border:2px solid var(--border2);
+  border-left:4px solid var(--accent);
+  padding:10px 14px;z-index:100;opacity:0;
+  transition:opacity .12s;min-width:200px;
+}
+.tip-title{font-weight:700;font-size:.82rem;margin-bottom:8px;
+  color:var(--text);text-transform:uppercase;letter-spacing:.05em;}
+.tip-row{display:flex;justify-content:space-between;gap:20px;
+  margin-bottom:3px;font-size:.72rem;}
+.tip-lbl{color:var(--muted2);font-family:'IBM Plex Sans',sans-serif}
+.tip-val{font-family:'IBM Plex Mono',monospace;font-weight:600}
+</style>
+</head>
+<body>
+
+<h1>Regional Distribution of Nuclear Power Capacity</h1>
+<div class="source-tag">Net Capacity GW(e) &nbsp;·&nbsp; IAEA PRIS &nbsp;·&nbsp; As of 31 Dec. 2024</div>
+
+<div class="chart" id="chart"></div>
+
+<div class="axis-wrap">
+  <div></div>
+  <div class="axis-inner" id="axis-inner"></div>
+</div>
+<div class="axis-unit-wrap">
+  <div></div>
+  <div class="axis-unit">Net Capacity, GW(e)</div>
+</div>
+
+<div class="legend-wrap">
+  <div></div>
+  <div class="legend">
+    <div class="leg-item">
+      <div class="leg-swatch" style="background:var(--op)"></div>In Operation
+    </div>
+    <div class="leg-item">
+      <div class="leg-swatch" style="background:var(--uc)"></div>Under Construction
+    </div>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tip-title" id="tip-title"></div>
+  <div class="tip-row">
+    <span class="tip-lbl">In Operation</span>
+    <span class="tip-val" id="tip-op" style="color:var(--op)"></span>
+  </div>
+  <div class="tip-row">
+    <span class="tip-lbl">Under Construction</span>
+    <span class="tip-val" id="tip-uc" style="color:var(--uc)"></span>
+  </div>
+  <div class="tip-row" style="margin-top:5px;border-top:1px solid #1a2235;padding-top:5px">
+    <span class="tip-lbl">Total</span>
+    <span class="tip-val" id="tip-total" style="color:var(--text)"></span>
+  </div>
+</div>
+
+<script>
+const REGIONS = [
+  { label:'Africa',                     op:  1.9, uc:  4.8 },
+  { label:'America — Latin',            op:  4.1, uc:  0.7 },
+  { label:'Asia — Middle East\n& South',op: 12.0, uc: 12.0 },
+  { label:'Europe — Central\n& Eastern',op: 54.0, uc: 10.4 },
+  { label:'Europe — Western',           op: 92.9, uc:  3.2 },
+  { label:'Asia — Far East',            op: 93.5, uc: 42.0 },
+  { label:'America — Northern',         op:112.2, uc:  2.2 },
+];
+
+const MAX_GW = 160;
+const TICKS  = [0, 30, 60, 90, 120, 150];
+
+const chart   = document.getElementById('chart');
+const tooltip = document.getElementById('tooltip');
+
+REGIONS.forEach(r => {
+  const total = r.op + r.uc;
+  const opPct = (r.op / MAX_GW * 100).toFixed(3) + '%';
+  const ucPct = (r.uc / MAX_GW * 100).toFixed(3) + '%';
+
+  const row = document.createElement('div');
+  row.className = 'row';
+
+  // Label
+  const lbl = document.createElement('div');
+  lbl.className = 'region-label';
+  lbl.innerHTML = r.label.replace('\n','<br>');
+  row.appendChild(lbl);
+
+  // Stacked bar
+  const wrap = document.createElement('div');
+  wrap.className = 'stack-wrap';
+
+  const segOp = document.createElement('div');
+  segOp.className = 'seg-op';
+  segOp.style.width = opPct;
+  wrap.appendChild(segOp);
+
+  if(r.uc > 0){
+    const segUc = document.createElement('div');
+    segUc.className = 'seg-uc';
+    segUc.style.width = ucPct;
+    wrap.appendChild(segUc);
+  }
+
+  const valLbl = document.createElement('div');
+  valLbl.className = 'bar-label';
+  valLbl.textContent = total.toFixed(1);
+  wrap.appendChild(valLbl);
+
+  const dots = document.createElement('div');
+  dots.className = 'dot-grid';
+  wrap.appendChild(dots);
+
+  row.appendChild(wrap);
+
+  row.addEventListener('mousemove', e => {
+    document.getElementById('tip-title').textContent = r.label.replace('\n','  ');
+    document.getElementById('tip-op').textContent    = r.op.toFixed(1) + ' GW(e)';
+    document.getElementById('tip-uc').textContent    = r.uc > 0 ? r.uc.toFixed(1) + ' GW(e)' : '—';
+    document.getElementById('tip-total').textContent = total.toFixed(1) + ' GW(e)';
+    tooltip.style.opacity = 1;
+    tooltip.style.left = Math.min(e.clientX + 18, window.innerWidth - 230) + 'px';
+    tooltip.style.top  = (e.clientY - 14) + 'px';
+  });
+  row.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+
+  chart.appendChild(row);
+});
+
+// Axis ticks
+const axisInner = document.getElementById('axis-inner');
+TICKS.forEach(t => {
+  const tick = document.createElement('div');
+  tick.className = 'tick';
+  tick.style.left = (t / MAX_GW * 100).toFixed(3) + '%';
+  tick.textContent = t;
+  axisInner.appendChild(tick);
+});
+</script>
+</body>
+</html>
